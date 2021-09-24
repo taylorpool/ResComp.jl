@@ -1,9 +1,10 @@
 module ResComp
+using Logging
 using DifferentialEquations
 using LinearAlgebra
 using Plots
 
-export UntrainedResComp, TrainedResComp
+export UntrainedResComp, TrainedResComp, train, test
 
 struct UntrainedResComp
     Wᵢₙ::AbstractArray
@@ -49,7 +50,7 @@ end;
 
 function calculateTransientIndex(drive_sol, ϵ)
     i = 1
-    while norm(drive_sol.u[i]) ≥ ϵ
+    while norm(drive_sol.u[i]) ≥ ϵ && i < length(drive_sol.u)
             i = i + 1
     end
     return i;
@@ -59,7 +60,18 @@ function calculateOutputMapping(rescomp::UntrainedResComp, drive_sol)
         index = calculateTransientIndex(drive_sol, rescomp.ϵ);
         D = rescomp.u.(drive_sol.t[index:end]);
         R = hcat(drive_sol.u[index:end]...);
-        Wₒᵤₜ = (R*R' \ R*D)';
+        Wₒᵤₜ = zeros(Float64, size(D)[1], size(R)[1]);
+        try
+            Wₒᵤₜ = (R*R' \ R*D)';
+        catch e
+            if isa(e, LinearAlgebra.SingularException)
+                    @warn "Could not solve least squares formulation--trying psuedoinverse"
+                    Wₒᵤₜ = (pinv(R*R')*R*D)'
+                    @warn "W out is: " Wₒᵤₜ
+            else
+                    @warn "Could not calculate matrix"
+            end
+        end
         return Wₒᵤₜ;
 end;
 
