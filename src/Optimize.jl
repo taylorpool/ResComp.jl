@@ -1,5 +1,5 @@
 include("ResComp.jl")
-
+using LinearAlgebra
 using Hyperopt
 
 function f(γ, σ, ρ)
@@ -14,8 +14,19 @@ function f(γ, σ, ρ)
             0.1)
         nᵣ = 20
         r₀ = 2*rand(Float64, nᵣ).-0.5
-        trained, test_sol = ResComp.train(untrained, r₀, (-100.0, 200.0))
-        vpt, train_sol = ResComp.test(trained, test_sol.u[end], (200.0, 4000.0))
+
+        vpt = 0.0;
+
+        try
+                trained, train_sol = ResComp.train(untrained, r₀, (-100.0, 200.0));
+                test_sol = ResComp.test(trained, test_sol.u[end], (200.0, 4000.0));
+                vpt = test_sol.t[end];
+        catch e
+                if isa(e, LinearAlgebra.SingularException)
+                        @warn "Could not solve least squares formulation"
+                end
+        end;
+
         return -vpt
 end
 

@@ -14,7 +14,6 @@ struct UntrainedResComp
     γ::Number
     σ::Number
     ρ::Number
-    ϵ::Number
 end;
 
 struct TrainedResComp
@@ -26,7 +25,6 @@ struct TrainedResComp
     γ::Number
     σ::Number
     ρ::Number
-    ϵ::Number
 end;
 
 TrainedResComp(Wₒᵤₜ::AbstractArray, r::UntrainedResComp) = TrainedResComp(
@@ -37,8 +35,11 @@ TrainedResComp(Wₒᵤₜ::AbstractArray, r::UntrainedResComp) = TrainedResComp(
                                                                           r.f,
                                                                           r.γ,
                                                                           r.σ,
-                                                                          r.ρ,
-                                                                         r.ϵ);
+                                                                          r.ρ)
+
+function drive_transient!(dr, r::AbstractArray, rescomp::Union::{UntrainedResComp, TrainedResComp}, t)
+        dr[:] = rescomp.γ.*(-r + rescomp.f.(rescomp.ρ.*rescomp.A*r))
+end;
 
 function drive!(dr, r::AbstractArray, rescomp::UntrainedResComp, t)
         dr[:] = rescomp.γ.*(-r + rescomp.f.(rescomp.ρ.*rescomp.A*r + rescomp.σ*rescomp.Wᵢₙ*rescomp.u(t)));
@@ -48,31 +49,20 @@ function drive!(dr, r::AbstractArray, rescomp::TrainedResComp, t)
         dr[:] = rescomp.γ.*(-r + rescomp.f.(rescomp.ρ.*rescomp.A*r + rescomp.σ*rescomp.Wᵢₙ*rescomp.Wₒᵤₜ*r));
 end;
 
-function calculateTransientIndex(drive_sol, ϵ)
-    i = 1
-    while norm(drive_sol.u[i]) ≥ ϵ && i < length(drive_sol.u)
-            i = i + 1
-    end
-    return i;
-end
+function find_transient_time(rescomp::UntrainedResComp, r₀, tspan::Tuple{Float64, Float64})
+    transient_prob = ODEProblem(transient!, r₀, tspan, rescomp);
+    condition(r, t, integrator) = norm(r,2) < 0.01;
+    affect!(integrator) = terminate!(integrator);
+    transient_cb = DiscreteCallback(condition, affect!);
+    transient_sol = solve(transient_prob, callback=transient_cb);
+    return transient_sol.t[end];
+end;
 
-function calculateOutputMapping(rescomp::UntrainedResComp, drive_sol)
-        index = calculateTransientIndex(drive_sol, rescomp.ϵ);
-        D = rescomp.u.(drive_sol.t[index:end]);
-        R = hcat(drive_sol.u[index:end]...);
-        Wₒᵤₜ = zeros(Float64, size(D)[1], size(R)[1]);
-        try
-            Wₒᵤₜ = (R*R' \ R*D)';
-        catch e
-            if isa(e, LinearAlgebra.SingularException)
-                    @warn "Could not solve least squares formulation--trying psuedoinverse"
-                    Wₒᵤₜ = (pinv(R*R')*R*D)'
-                    @warn "W out is: " Wₒᵤₜ
-            else
-                    @warn "Could not calculate matrix"
-            end
-        end
-        return Wₒᵤₜ;
+function calculateOutputMapping(rescomp::UntrainedResComp, drive_sol, transient_time)
+        transient_mask = drive_sol.t .> transient_time;
+        D = rescomp.u.(drive_sol.t[transient_mask]);
+        R = drive_sol[:, transient_mask];
+        return (R*R' \ R*D)';
 end;
 
 function calculateValidPredictionTime(true_fun, rescomp_pred, ϵ, W)
@@ -85,16 +75,20 @@ function calculateValidPredictionTime(true_fun, rescomp_pred, ϵ, W)
 end
 
 function train(rescomp::UntrainedResComp, r₀::AbstractArray, tspan::Tuple{Float64, Float64})
-        drive_prob = ODEProblem(drive!, r₀, tspan, rescomp);
+        transient_time = find_transient_time(rescomp, r₀, tspan);
+        drive_prob = ODEProblem(drive!, r₀, (tspan[1], tspan[2]+transient_time), rescomp);
         drive_sol = solve(drive_prob);
-        Wₒᵤₜ = calculateOutputMapping(rescomp, drive_sol);
+        Wₒᵤₜ = calculateOutputMapping(rescomp, drive_sol, transient_time);
         return TrainedResComp(Wₒᵤₜ, rescomp), drive_sol;
 end;
 
 function test(rescomp::TrainedResComp, r₀::AbstractArray, tspan::Tuple{Float64, Float64})
         drive_prob = ODEProblem(drive!, r₀, tspan, rescomp);
-        drive_sol = solve(drive_prob);
-        return calculateValidPredictionTime(rescomp.u, drive_sol, rescomp.ϵ, rescomp.Wₒᵤₜ), drive_sol; 
+        condition(r, t, integrator) = norm(rescomp.Wₒᵤₜ*r - rescomp.u(t), 2) > 0.01;
+        affect!(integrator) = terminate!(integrator);
+        vpt_cb = DiscreteCallback(condition, affect!);
+        drive_sol = solve(drive_prob, callback=vpt_cb);
+        return drive_sol; 
 end;
 
 function plotResults(train_sol, test_sol, rescomp::TrainedResComp)
