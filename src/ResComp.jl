@@ -1,56 +1,52 @@
 module ResComp
-using Logging
 using DifferentialEquations
 using LinearAlgebra
-using Plots
 
 export UntrainedResComp, TrainedResComp, train, test
 
-struct UntrainedResComp
-    Wᵢₙ::AbstractArray
-    u
-    A::AbstractArray
-    f
-    γ::Number
-    σ::Number
-    ρ::Number
+struct UntrainedResComp{T<:Real}
+    Wᵢₙ::AbstractArray{T,2}
+    u::Function
+    A::AbstractArray{T,2}
+    f::Function
+    γ::T
+    σ::T
+    ρ::T
 end;
 
-struct TrainedResComp
-    Wₒᵤₜ::AbstractArray
-    Wᵢₙ::AbstractArray
-    u
-    A::AbstractArray
-    f
-    γ::Number
-    σ::Number
-    ρ::Number
+function initialize_rescomp(u, f, γ::T, σ::T, ρ::T, nᵣ::Int, nₛ::Int) where {T<:Real}
+        A = rand(T, (nᵣ, nᵣ)).-0.5;
+        Wᵢₙ = rand(T, (nᵣ,nₛ)).-0.5;
+        return ResComp.UntrainedResComp(Wᵢₙ./opnorm(Wᵢₙ), u, A./opnorm(A), f, γ, σ, ρ);
 end;
 
-TrainedResComp(Wₒᵤₜ::AbstractArray, r::UntrainedResComp) = TrainedResComp(
-                                                                          Wₒᵤₜ,
-                                                                          r.Wᵢₙ,
-                                                                          r.u,
-                                                                          r.A,
-                                                                          r.f,
-                                                                          r.γ,
-                                                                          r.σ,
-                                                                          r.ρ)
-
-function drive_transient!(dr, r::AbstractArray, rescomp::Union::{UntrainedResComp, TrainedResComp}, t)
-        dr[:] = rescomp.γ.*(-r + rescomp.f.(rescomp.ρ.*rescomp.A*r))
+struct TrainedResComp{T<:Real}
+    Wₒᵤₜ::AbstractArray{T,2}
+    Wᵢₙ::AbstractArray{T,2}
+    u::Function
+    A::AbstractArray{T,2}
+    f::Function
+    γ::T
+    σ::T
+    ρ::T
 end;
 
-function drive!(dr, r::AbstractArray, rescomp::UntrainedResComp, t)
+TrainedResComp(Wₒᵤₜ::AbstractArray{T,2}, r::UntrainedResComp{T}) where {T<:Real} = TrainedResComp(Wₒᵤₜ, r.Wᵢₙ, r.u, r.A, r.f, r.γ, r.σ, r.ρ);
+
+function drive_transient!(dr::AbstractVector{T}, r::AbstractVector{T}, rescomp::UntrainedResComp{T}, t) where {T<:Real}
+        dr[:] = rescomp.γ.*(-r + rescomp.f.(rescomp.ρ.*rescomp.A*r));
+end;
+
+function drive!(dr::AbstractVector{T}, r::AbstractVector{T}, rescomp::UntrainedResComp{T}, t) where {T<:Real}
         dr[:] = rescomp.γ.*(-r + rescomp.f.(rescomp.ρ.*rescomp.A*r + rescomp.σ*rescomp.Wᵢₙ*rescomp.u(t)));
 end;
 
-function drive!(dr, r::AbstractArray, rescomp::TrainedResComp, t)
+function drive!(dr::AbstractVector{T}, r::AbstractVector{T}, rescomp::TrainedResComp{T}, t) where {T<:Real}
         dr[:] = rescomp.γ.*(-r + rescomp.f.(rescomp.ρ.*rescomp.A*r + rescomp.σ*rescomp.Wᵢₙ*rescomp.Wₒᵤₜ*r));
 end;
 
-function find_transient_time(rescomp::UntrainedResComp, r₀, tspan::Tuple{Float64, Float64})
-    transient_prob = ODEProblem(transient!, r₀, tspan, rescomp);
+function find_transient_time(rescomp::UntrainedResComp{T}, r₀::AbstractVector{T}, tspan::Tuple{Float64, Float64}) where {T<:Real}
+    transient_prob = ODEProblem(drive_transient!, r₀, tspan, rescomp);
     condition(r, t, integrator) = norm(r,2) < 0.01;
     affect!(integrator) = terminate!(integrator);
     transient_cb = DiscreteCallback(condition, affect!);
@@ -58,23 +54,14 @@ function find_transient_time(rescomp::UntrainedResComp, r₀, tspan::Tuple{Float
     return transient_sol.t[end];
 end;
 
-function calculateOutputMapping(rescomp::UntrainedResComp, drive_sol, transient_time)
+function calculateOutputMapping(rescomp::UntrainedResComp{T}, drive_sol, transient_time::Float64) where {T<:Real}
         transient_mask = drive_sol.t .> transient_time;
         D = rescomp.u.(drive_sol.t[transient_mask]);
         R = drive_sol[:, transient_mask];
         return (R*R' \ R*D)';
 end;
 
-function calculateValidPredictionTime(true_fun, rescomp_pred, ϵ, W)
-        true_prediction = true_fun.(rescomp_pred.t);
-        i = 1;
-        while norm(true_fun(rescomp_pred.t[i]) - W*rescomp_pred.u[i]) < ϵ
-                i += 1;
-        end;
-        return rescomp_pred.t[i] - rescomp_pred.t[1];
-end
-
-function train(rescomp::UntrainedResComp, r₀::AbstractArray, tspan::Tuple{Float64, Float64})
+function train(rescomp::UntrainedResComp{T}, r₀::AbstractVector{T}, tspan::Tuple{Float64, Float64}) where {T<:Real}
         transient_time = find_transient_time(rescomp, r₀, tspan);
         drive_prob = ODEProblem(drive!, r₀, (tspan[1], tspan[2]+transient_time), rescomp);
         drive_sol = solve(drive_prob);
@@ -82,7 +69,7 @@ function train(rescomp::UntrainedResComp, r₀::AbstractArray, tspan::Tuple{Floa
         return TrainedResComp(Wₒᵤₜ, rescomp), drive_sol;
 end;
 
-function test(rescomp::TrainedResComp, r₀::AbstractArray, tspan::Tuple{Float64, Float64})
+function test(rescomp::TrainedResComp{T}, r₀::AbstractVector{T}, tspan::Tuple{Float64, Float64}) where {T<:Real}
         drive_prob = ODEProblem(drive!, r₀, tspan, rescomp);
         condition(r, t, integrator) = norm(rescomp.Wₒᵤₜ*r - rescomp.u(t), 2) > 0.01;
         affect!(integrator) = terminate!(integrator);
@@ -91,14 +78,4 @@ function test(rescomp::TrainedResComp, r₀::AbstractArray, tspan::Tuple{Float64
         return drive_sol; 
 end;
 
-function plotResults(train_sol, test_sol, rescomp::TrainedResComp)
-    train_nodes = hcat(train_sol.u...)';
-    test_nodes = hcat(test_sol.u...)';
-    test_outputs = test_nodes*rescomp.Wₒᵤₜ';
-    train_node_plot = plot(train_sol, title="Training Nodes")
-    test_node_plot = plot(test_sol, title="Test Nodes")
-    test_output_plot = plot(test_sol.t, test_outputs, title="Test Output")
-    plot(train_node_plot, test_node_plot, test_output_plot, layout=(1,3), legend=false)
-end
-        
 end

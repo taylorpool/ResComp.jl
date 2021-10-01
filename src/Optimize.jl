@@ -1,41 +1,39 @@
 include("ResComp.jl")
 using LinearAlgebra
 using Hyperopt
+using Base.Threads
 
 function f(γ, σ, ρ)
-       untrained = ResComp.UntrainedResComp(
-            2*(rand(Float64, (20, 1)).-0.5),
-            t->0.5.*sin.(t),
-            2*(rand(Float64, (20,20)).-0.5),
-            tanh,
-            γ,
-            σ,
-            ρ, 
-            0.1)
-        nᵣ = 20
+        nᵣ::Int = 20;
+        untrained = ResComp.initialize_rescomp(t->0.5.*sin.(t), tanh, γ, σ, ρ, nᵣ, 1)
+            
         r₀ = 2*rand(Float64, nᵣ).-0.5
 
         vpt = 0.0;
 
         try
-                trained, train_sol = ResComp.train(untrained, r₀, (-100.0, 200.0));
-                test_sol = ResComp.test(trained, test_sol.u[end], (200.0, 4000.0));
-                vpt = test_sol.t[end];
+                train_tspan = (0.0, 100.0);
+                test_tspan = (0.0, 100.0) .+ train_tspan[2]
+                trained, train_sol = ResComp.train(untrained, r₀, train_tspan);
+                test_sol = ResComp.test(trained, train_sol.u[end], test_tspan);
+                vpt = test_sol.t[end] - test_tspan[1];
         catch e
                 if isa(e, LinearAlgebra.SingularException)
                         @warn "Could not solve least squares formulation"
+                else
+                        rethrow()
                 end
         end;
 
         return -vpt
-end
+end;
 
-ho = @hyperopt for i = 50,
-        γ = LinRange(0.1,25,10),
-        σ = LinRange(0.01, 5.0,10),
-        ρ = LinRange(0.1, 25,10)
+function optimize_rescomp()
+        ho = @hyperopt for i = 1000,
+                γ = LinRange(0.01,25,100),
+                σ = LinRange(0.01, 5.0,100),
+                ρ = LinRange(0.01, 25, 100)
 
-        @show f(γ,σ,ρ)
-end
-
-printmin(ho)
+                @show f(γ,σ,ρ)
+        end;
+end;
