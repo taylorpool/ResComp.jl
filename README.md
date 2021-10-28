@@ -11,3 +11,5 @@ A Package to Explore Hyperparameter Optimization Over a Reservoir Computing Spac
 7. DrivenRescomp
 8. Parallel computing
 9. Take mean of VPTs for each hyperparameter setting
+10. Test with sparse matrices
+11. Save results to file
