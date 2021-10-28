@@ -10,3 +10,4 @@ A Package to Explore Hyperparameter Optimization Over a Reservoir Computing Spac
 6. Soft robot system
 7. DrivenRescomp
 8. Parallel computing
+9. Take mean of VPTs for each hyperparameter setting
