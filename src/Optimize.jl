@@ -3,9 +3,9 @@ using LinearAlgebra
 using Hyperopt
 using Base.Threads
 
-function f(γ, σ, ρ)
+function f(γ, σ, ρ, α)
         nᵣ::Int = 20;
-        untrained = ResComp.initialize_rescomp(t->0.5.*sin.(t), tanh, γ, σ, ρ, nᵣ, 1)
+        untrained = ResComp.initialize_rescomp(t->0.5.*sin.(t), tanh, γ, σ, ρ, nᵣ, 1, α)
             
         r₀ = 2*rand(Float64, nᵣ).-0.5
 
@@ -29,11 +29,12 @@ function f(γ, σ, ρ)
 end;
 
 function optimize_rescomp()
-        ho = @hyperopt for i = 1000,
+        ho = @hyperopt for i = 10,
                 γ = LinRange(0.01,25,100),
                 σ = LinRange(0.01, 5.0,100),
-                ρ = LinRange(0.01, 25, 100)
+                ρ = LinRange(0.01, 25, 100),
+                α = LinRange(0.001, 0.5, 10)
 
-                @show f(γ,σ,ρ)
+                @show f(γ,σ,ρ,α)
         end;
 end;

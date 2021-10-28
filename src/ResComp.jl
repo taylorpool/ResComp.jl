@@ -4,36 +4,38 @@ using LinearAlgebra
 
 export UntrainedResComp, TrainedResComp, train, test
 
-struct UntrainedResComp{T<:Real}
-    Wᵢₙ::AbstractArray{T,2}
+struct UntrainedResComp{T<:Real, M<:AbstractArray{T,2}}
+    Wᵢₙ::M
     u::Function
-    A::AbstractArray{T,2}
+    A::M
     f::Function
     γ::T
     σ::T
     ρ::T
+    α::T
 end;
 
-function initialize_rescomp(u, f, γ::T, σ::T, ρ::T, nᵣ::Int, nₛ::Int) where {T<:Real}
+function initialize_rescomp(u, f, γ::T, σ::T, ρ::T, nᵣ::Int, nₛ::Int, α::T) where {T<:Real}
         A = rand(T, (nᵣ, nᵣ)).-0.5;
         Wᵢₙ = rand(T, (nᵣ,nₛ)).-0.5;
-        return ResComp.UntrainedResComp(Wᵢₙ./opnorm(Wᵢₙ), u, A./opnorm(A), f, γ, σ, ρ);
+        return ResComp.UntrainedResComp(Wᵢₙ./opnorm(Wᵢₙ), u, A./opnorm(A), f, γ, σ, ρ, α);
 end;
 
 struct TrainedResComp{T<:Real}
-    Wₒᵤₜ::AbstractArray{T,2}
-    Wᵢₙ::AbstractArray{T,2}
+    Wₒᵤₜ::M where M<:AbstractMatrix{T}
+    Wᵢₙ::N where N<:AbstractMatrix{T}
     u::Function
-    A::AbstractArray{T,2}
+    A::P where P<:AbstractMatrix{T}
     f::Function
     γ::T
     σ::T
     ρ::T
+    α::T
 end;
 
-TrainedResComp(Wₒᵤₜ::AbstractArray{T,2}, r::UntrainedResComp{T}) where {T<:Real} = TrainedResComp(Wₒᵤₜ, r.Wᵢₙ, r.u, r.A, r.f, r.γ, r.σ, r.ρ);
+TrainedResComp(Wₒᵤₜ::M, r::UntrainedResComp{T}) where {T<:Real,M<:AbstractArray{T,2}} = TrainedResComp(Wₒᵤₜ, r.Wᵢₙ, r.u, r.A, r.f, r.γ, r.σ, r.ρ, r.α);
 
-function drive_transient!(dr::AbstractVector{T}, r::AbstractVector{T}, rescomp::UntrainedResComp{T}, t) where {T<:Real}
+function drive_transient!(dr::V, r::V, rescomp::UntrainedResComp{T}, t) where {T<:Real,V<:AbstractVector{T}}
         dr[:] = rescomp.γ.*(-r + rescomp.f.(rescomp.ρ.*rescomp.A*r));
 end;
 
@@ -58,7 +60,7 @@ function calculateOutputMapping(rescomp::UntrainedResComp{T}, drive_sol, transie
         transient_mask = drive_sol.t .> transient_time;
         D = rescomp.u.(drive_sol.t[transient_mask]);
         R = drive_sol[:, transient_mask];
-        return (R*R' \ R*D)';
+        return ((R*R'.-rescomp.α*rescomp.α) \ R*D)';
 end;
 
 function train(rescomp::UntrainedResComp{T}, r₀::AbstractVector{T}, tspan::Tuple{Float64, Float64}) where {T<:Real}
