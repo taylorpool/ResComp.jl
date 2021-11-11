@@ -1,11 +1,13 @@
 include("ResComp.jl")
+module Optimize
 using LinearAlgebra
 using Hyperopt
 using Base.Threads
 
-function f(γ, σ, ρ, α)
+
+function f(system, nₛ, γ, σ, ρ, α)
         nᵣ::Int = 20;
-        untrained = ResComp.initialize_rescomp(t->0.5.*sin.(t), tanh, γ, σ, ρ, nᵣ, 1, α)
+        untrained = ResComp.initialize_rescomp(system, tanh, γ, σ, ρ, nᵣ, nₛ, α)
             
         r₀ = 2*rand(Float64, nᵣ).-0.5
 
@@ -28,13 +30,15 @@ function f(γ, σ, ρ, α)
         return -vpt
 end;
 
-function optimize_rescomp()
-        ho = @hyperopt for i = 10,
+function optimize_rescomp(system,nₛ)
+        ho = @phyperopt for i = 100,
                 γ = LinRange(0.01,25,100),
                 σ = LinRange(0.01, 5.0,100),
                 ρ = LinRange(0.01, 25, 100),
                 α = LinRange(0.001, 0.5, 10)
 
-                @show f(γ,σ,ρ,α)
+                @show f(system,nₛ,γ,σ,ρ,α)
         end;
+end;
+
 end;
