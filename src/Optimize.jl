@@ -1,5 +1,5 @@
-include("ResComp.jl")
 module Optimize
+include("ResComp.jl")
 using LinearAlgebra
 using Hyperopt
 using Base.Threads
@@ -11,23 +11,25 @@ function f(system, nₛ, γ, σ, ρ, α)
             
         r₀ = 2*rand(Float64, nᵣ).-0.5
 
-        vpt = 0.0;
+        vpts = zeros(10);
+        for i = 1:size(vpts)
 
-        try
-                train_tspan = (0.0, 100.0);
-                test_tspan = (0.0, 100.0) .+ train_tspan[2]
-                trained, train_sol = ResComp.train(untrained, r₀, train_tspan);
-                test_sol = ResComp.test(trained, train_sol.u[end], test_tspan);
-                vpt = test_sol.t[end] - test_tspan[1];
-        catch e
-                if isa(e, LinearAlgebra.SingularException)
-                        @warn "Could not solve least squares formulation"
-                else
-                        rethrow()
-                end
+                try
+                        train_tspan = (0.0, 100.0);
+                        test_tspan = (0.0, 100.0) .+ train_tspan[2]
+                        trained, train_sol = ResComp.train(untrained, r₀, train_tspan);
+                        test_sol = ResComp.test(trained, train_sol.u[end], test_tspan);
+                        vpt = test_sol.t[end] - test_tspan[1];
+                catch e
+                        if isa(e, LinearAlgebra.SingularException)
+                                @warn "Could not solve least squares formulation"
+                        else
+                                rethrow()
+                        end
+                end;
+
+                return -vpt
         end;
-
-        return -vpt
 end;
 
 function optimize_rescomp(system,nₛ)
