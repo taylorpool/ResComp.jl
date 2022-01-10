@@ -20,4 +20,4 @@ println("Here!")
 # Perform hyperparameter optimization
 client = Optimize.torch_rescomp(system, 3)
 # Save the results to a json file
-client.save_to_json()
+client.save_to_json_file(filepath="/fslhome/tpool2/")
