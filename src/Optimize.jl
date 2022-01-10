@@ -27,9 +27,9 @@ function try_find_vpt(untrained, r₀)
 end
 
 function find_vpts(system, nₛ, γ, σ, ρ, α)
-        nᵣ::Int = 20;
+        nᵣ::Int = 500;
 
-        vpts = zeros(10);
+        vpts = zeros(50);
         @threads for i = 1:length(vpts)
                 untrained = ResComp.initialize_rescomp(system, tanh, γ, σ, ρ, nᵣ, nₛ, α)
                 r₀ = 2*rand(Float64, nᵣ).-0.5
@@ -50,25 +50,25 @@ function torch_rescomp(system,nₛ)
                 {
                         'name': 'gamma',
                         'type': 'range',
-                        'bounds': [0.01, 25],
+                        'bounds': [0.000001, 10],
                         'value_type': 'float'
                 },
                 {
                         'name': 'sigma',
                         'type': 'range',
-                        'bounds': [0.01, 5.0],
+                        'bounds': [0.000001, 5.0],
                         'value_type': 'float'
                 },
                 {
                         'name': 'rho',
                         'type': 'range',
-                        'bounds': [0.01, 25],
+                        'bounds': [0.000001, 10],
                         'value_type': 'float'
                 },
                 {
                         'name': 'alpha',
                         'type': 'range',
-                        'bounds': [0.001, 0.5],
+                        'bounds': [0.0000001, 0.5],
                         'value_type': 'float'
                 },
                 ]";
