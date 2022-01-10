@@ -15,6 +15,8 @@ elseif name == "thomas"
     system = CaseStudies.get_thomas(duration)
 end
 
+println("Here!")
+
 # Perform hyperparameter optimization
 client = Optimize.torch_rescomp(system, 3)
 # Save the results to a json file
