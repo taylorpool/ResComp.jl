@@ -19,4 +19,5 @@ export OMP_NUM_THREADS=$SLURM_CPUS_ON_NODE
 module load julia
 source /fslhome/tpool2/RCInitialCond/venv/bin/activate
 cd /fslhome/tpool2/ResComp.jl
+julia --project src/setup.jl
 julia --project -p 10 /fslhome/tpool2/ResComp.jl/src/experiment.jl $1
