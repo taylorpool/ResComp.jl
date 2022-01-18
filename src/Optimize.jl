@@ -1,7 +1,6 @@
 module Optimize
 include("ResComp.jl")
 using LinearAlgebra
-using Hyperopt
 using Base.Threads
 using PyCall
 import Statistics
@@ -43,7 +42,7 @@ function evaluate(system, nₛ, parameters)
         return Statistics.mean(vpts), Statistics.std(vpts)
 end;
 
-function torch_rescomp(system,nₛ)
+function torch_rescomp(system,nₛ,num_trials)
         ax_client = PyCall.pyimport("ax.service.ax_client")
         client = ax_client.AxClient()
         params = "[
@@ -74,7 +73,7 @@ function torch_rescomp(system,nₛ)
                 ]";
         PyCall.py"$client.create_experiment(name='hello', parameters=$$params, objective_name='vpt', minimize=False)"
 
-        for trial_index = 1:25
+        for trial_index = 1:num_trials
                 parameters, trial_index = client.get_next_trial()
                 client.complete_trial(trial_index=trial_index, raw_data=evaluate(system, nₛ, parameters))
         end
