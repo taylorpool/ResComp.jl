@@ -22,62 +22,39 @@ function try_find_vpt(untrained, r₀)
                 else
                         rethrow()
                 end
-        end;
+        end
 end
 
-function find_vpts(system, nₛ, γ, σ, ρ, α)
-        nᵣ::Int = 500;
+function find_vpts(parameters)
+        nᵣ = parameters["reservoir_dimension"];
+        system = parameters["system"]
+        f = tanh
+        γ = parameters["gamma"]
+        σ = parameters["sigma"]
+        ρ = parameters["rho"]
+        system_dimension = parameters["system_dimension"]
+        α = parameters["alpha"]
 
         vpts = zeros(50);
         @threads for i = 1:length(vpts)
-                untrained = ResComp.initialize_rescomp(system, tanh, γ, σ, ρ, nᵣ, nₛ, α)
+                untrained = ResComp.initialize_rescomp(
+                        system,
+                        f,
+                        γ,
+                        σ,
+                        ρ,
+                        nᵣ,
+                        system_dimension,
+                        α)
                 r₀ = 2*rand(Float64, nᵣ).-0.5
                 vpts[i] = try_find_vpt(untrained, r₀);
         end;
         return vpts
 end;
 
-function evaluate(system, nₛ, parameters)
-        vpts = find_vpts(system, nₛ, parameters["gamma"], parameters["sigma"], parameters["rho"], parameters["alpha"]);
+function evaluate(parameters)
+        vpts = find_vpts(parameters)
         return Statistics.mean(vpts), Statistics.std(vpts)
-end;
-
-function torch_rescomp(system,nₛ,num_trials)
-        ax_client = PyCall.pyimport("ax.service.ax_client")
-        client = ax_client.AxClient()
-        params = "[
-                {
-                        'name': 'gamma',
-                        'type': 'range',
-                        'bounds': [0.000001, 10],
-                        'value_type': 'float'
-                },
-                {
-                        'name': 'sigma',
-                        'type': 'range',
-                        'bounds': [0.000001, 5.0],
-                        'value_type': 'float'
-                },
-                {
-                        'name': 'rho',
-                        'type': 'range',
-                        'bounds': [0.000001, 10],
-                        'value_type': 'float'
-                },
-                {
-                        'name': 'alpha',
-                        'type': 'range',
-                        'bounds': [0.0000001, 0.5],
-                        'value_type': 'float'
-                },
-                ]";
-        PyCall.py"$client.create_experiment(name='hello', parameters=$$params, objective_name='vpt', minimize=False)"
-
-        for trial_index = 1:num_trials
-                parameters, trial_index = client.get_next_trial()
-                client.complete_trial(trial_index=trial_index, raw_data=evaluate(system, nₛ, parameters))
-        end
-        return client;
 end;
 
 end;

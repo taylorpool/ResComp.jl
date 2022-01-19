@@ -47,4 +47,15 @@ function get_thomas(duration)
     return get_solution(thomas!, duration, 0.2)
 end;
 
+function get_system(system_name, duration)
+    if system_name == "lorenz"
+        system = CaseStudies.get_lorenz(duration)
+    elseif system_name == "rossler"
+        system = CaseStudies.get_rossler(duration)
+    elseif system_name == "thomas"
+        system = CaseStudies.get_thomas(duration)
+    end
+    return system
+end;
+
 end;
