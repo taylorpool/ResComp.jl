@@ -71,6 +71,16 @@ function train(rescomp::UntrainedResComp{T}, r₀, tspan::Tuple{Float64, Float64
         return TrainedResComp(Wₒᵤₜ, rescomp), drive_sol;
 end;
 
+function train_windows(rescomp::UntrainedResComp{T}, r₀, tspan::Tuple{Float64, Float64}, num_windows::Int) where {T<:Real}
+        transient_time = find_transient_time(rescomp, r₀, tspan);
+        drive_prob = ODEProblem(drive!, r₀, (tspan[1], tspan[2]+transient_time), rescomp)
+        affect!(integrator) = integrator.u = integrator.p.Wᵢₙ*integrator.p.u(integrator.t)
+        callback = PeriodicCallback(affect!, (tspan[2]-tspan[1])/num_windows)
+        drive_sol = solve(drive_prob, callback=callback)
+        W_out = calculateOutputMapping(rescomp, drive_sol, transient_time);
+        return TrainedResComp(W_out, rescomp), drive_sol
+end
+
 function test(rescomp::TrainedResComp{T}, r₀, tspan::Tuple{Float64, Float64}) where {T<:Real}
         drive_prob = ODEProblem(drive!, r₀, tspan, rescomp);
         condition(r, t, integrator) = norm(rescomp.Wₒᵤₜ*r - rescomp.u(t), 2) > 0.01;

@@ -5,17 +5,21 @@ using Base.Threads
 using PyCall
 import Statistics
 
-function find_vpt(untrained, r₀)
+function find_vpt(untrained, r₀, parameters)
         train_tspan = (0.0, 100.0);
         test_tspan = (0.0, 100.0) .+ train_tspan[2]
-        trained, train_sol = ResComp.train(untrained, r₀, train_tspan);
+        if parameters["experiment_params"]["windows"]
+                trained, train_sol = ResComp.train_windows(untrained, r₀, train_tspan, parameters["num_windows"])
+        else
+                trained, train_sol = ResComp.train(untrained, r₀, train_tspan);
+        end
         test_sol = ResComp.test(trained, train_sol.u[end], test_tspan);
         return test_sol.t[end] - test_tspan[1];
 end
 
-function try_find_vpt(untrained, r₀)
+function try_find_vpt(untrained, r₀, parameters)
         try
-                return find_vpt(untrained, r₀);
+                return find_vpt(untrained, r₀, parameters);
         catch e
                 if isa(e, LinearAlgebra.SingularException)
                         @warn "Could not solve least squares formulation"
@@ -47,7 +51,7 @@ function find_vpts(parameters)
                         system_dimension,
                         α)
                 r₀ = 2*rand(Float64, nᵣ).-0.5
-                vpts[i] = try_find_vpt(untrained, r₀);
+                vpts[i] = try_find_vpt(untrained, r₀, parameters);
         end;
         return vpts
 end;

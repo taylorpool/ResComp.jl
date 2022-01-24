@@ -1,0 +1,42 @@
+{
+    "experiment_name": "RosslerTest",
+    "system_name": "rossler",
+    "system_duration": 200.0,
+    "system_dimension": 3,
+    "reservoir_dimension": 100,
+    "num_trials": 25,
+    "windows": true,
+    "results_directory": "/Users/taylorpool/ResComp.jl/data/",
+    "optimization_parameters": [
+        {
+            "name": "gamma",
+            "type": "range",
+            "bounds": [0.000001, 10],
+            "value_type": "float"
+        },
+        {
+            "name": "sigma",
+            "type": "range",
+            "bounds": [0.000001, 10],
+            "value_type": "float"
+        },
+        {
+            "name": "rho",
+            "type": "range",
+            "bounds": [0.000001, 10],
+            "value_type": "float"
+        },
+        {
+            "name": "alpha",
+            "type": "range",
+            "bounds": [0.0000001, 10],
+            "value_type": "float"
+        },
+        {
+            "name": "num_windows",
+            "type": "range",
+            "bounds": [1, 20],
+            "value_type": "int"
+        }
+    ]
+}

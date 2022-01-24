@@ -54,6 +54,7 @@ for trial_index = 1:num_trials
     trial_parameters["reservoir_dimension"] = reservoir_dimension
     # Set system
     trial_parameters["system"] = system
+    trial_parameters["experiment_params"] = experiment
     # Complete the trial
     client.complete_trial(
         trial_index=trial_index,
