@@ -1,3 +1,10 @@
+authors = "Taylor Pool taylorpool.27@gmail.com"
+name = "ResComp"
+
+uuid = "5e056418-07d4-4936-a843-989fc06f8afb"
+
+version = "1.0.0"
+
 [deps]
 Debugger = "31a5f54b-26ea-5ae9-a837-f05ce5417438"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
