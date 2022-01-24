@@ -5,8 +5,8 @@
     "system_duration": 200.0,
     "system_dimension": 3,
     "reservoir_dimension": 10,
-    "num_trials": 25,
-    "results_directory": "/Users/taylorpool/ResComp.jl/data/",
+    "num_trials": 100,
+    "results_directory": "/fslhome/tpool2/ResComp.jl/experiments/",
     "optimization_parameters": [
         {
             "name": "gamma",

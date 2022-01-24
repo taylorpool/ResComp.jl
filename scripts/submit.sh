@@ -15,7 +15,7 @@
 export OMP_NUM_THREADS=$SLURM_CPUS_ON_NODE
 
 # Set experiment_filepath
-EXPERIMENT = $1 
+EXPERIMENT=$1 
 
 # LOAD MODULES, INSERT CODE, AND RUN YOUR PROGRAMS HERE
 module load julia

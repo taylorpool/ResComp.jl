@@ -1,12 +1,12 @@
 {
-    "experiment_name": "RosslerTest",
+    "experiment_name": "RosslerWindows",
     "system_name": "rossler",
     "system_duration": 200.0,
     "system_dimension": 3,
     "reservoir_dimension": 100,
-    "num_trials": 25,
+    "num_trials": 100,
     "windows": true,
-    "results_directory": "/Users/taylorpool/ResComp.jl/data/",
+    "results_directory": "/fslhome/tpool2/ResComp.jl/experiments/",
     "optimization_parameters": [
         {
             "name": "gamma",
