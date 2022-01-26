@@ -4,10 +4,5 @@ authors = "Taylor Pool taylorpool.27@gmail.com"
 version = "1.0.0"
 
 [deps]
-Debugger = "31a5f54b-26ea-5ae9-a837-f05ce5417438"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
-Erdos = "90d7349d-81aa-5495-813a-883243abfe31"
-JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
