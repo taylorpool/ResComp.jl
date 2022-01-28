@@ -4,10 +4,15 @@
     "windows": true,
     "system_duration": 200.0,
     "system_dimension": 3,
-    "reservoir_dimension": 10,
     "num_trials": 100,
     "results_directory": "/fslhome/tpool2/ResComp.jl/experiments/",
     "optimization_parameters": [
+        {
+            "name": "reservoir_dimension",
+            "type": "range",
+            "bounds": [500, 2500],
+            "value_type": "int"
+        },
         {
             "name": "gamma",
             "type": "range",

@@ -24,8 +24,6 @@ system_name = experiment["system_name"]
 system_duration = experiment["system_duration"]
 # Get system dimension
 system_dimension = experiment["system_dimension"]
-# Get reservoir dimension
-reservoir_dimension = experiment["reservoir_dimension"]
 # Get results directory
 results_directory = experiment["results_directory"]
 
@@ -50,8 +48,6 @@ for trial_index = 1:num_trials
     trial_parameters, trial_index = client.get_next_trial()
     # Set system dimension
     trial_parameters["system_dimension"] = system_dimension
-    # Set reservoir dimension
-    trial_parameters["reservoir_dimension"] = reservoir_dimension
     # Set system
     trial_parameters["system"] = system
     trial_parameters["experiment_params"] = experiment
