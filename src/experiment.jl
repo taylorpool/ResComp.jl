@@ -46,11 +46,8 @@ PyCall.py"$client.create_experiment(
 # Iterate through each trial
 for trial_index = 1:num_trials
     trial_parameters, trial_index = client.get_next_trial()
-    # Set system dimension
-    trial_parameters["system_dimension"] = system_dimension
-    # Set system
-    trial_parameters["system"] = system
     trial_parameters["experiment_params"] = experiment
+    trial_parameters["system"] = system
     # Complete the trial
     client.complete_trial(
         trial_index=trial_index,

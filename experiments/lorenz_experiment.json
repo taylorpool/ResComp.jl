@@ -3,32 +3,35 @@
     "system_name": "lorenz",
     "system_duration": 200.0,
     "system_dimension": 3,
-    "reservoir_dimension": 100,
+    "reservoir_dimension": 2500,
+    "num_samples_per_trial": 25,
+    "train_time": 20.0,
+    "test_time": 20.0,
     "num_trials": 25,
-    "results_directory": "/Users/taylorpool/ResComp.jl/data/",
+    "results_directory": "/home/taylor/reservor_research/ResComp.jl/experiments",
     "optimization_parameters": [
         {
             "name": "gamma",
             "type": "range",
-            "bounds": [0.000001, 10],
+            "bounds": [0.000001, 100],
             "value_type": "float"
         },
         {
             "name": "sigma",
             "type": "range",
-            "bounds": [0.000001, 10],
+            "bounds": [0.000001, 100],
             "value_type": "float"
         },
         {
             "name": "rho",
             "type": "range",
-            "bounds": [0.000001, 10],
+            "bounds": [0.000001, 100],
             "value_type": "float"
         },
         {
             "name": "alpha",
             "type": "range",
-            "bounds": [0.0000001, 10],
+            "bounds": [0.0000001, 100],
             "value_type": "float"
         }
     ]

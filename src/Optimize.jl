@@ -6,14 +6,14 @@ using PyCall
 import Statistics
 
 function find_vpt(untrained, r₀, parameters)
-        train_tspan = (0.0, 100.0);
-        test_tspan = (0.0, 100.0) .+ train_tspan[2]
+        train_tspan = (0.0, parameters["experiment_params"]["train_time"]);
+        test_tspan = (0.0, parameters["experiment_params"]["test_time"]) .+ train_tspan[2]
         if parameters["experiment_params"]["windows"]
                 trained, train_sol = ResComp.train_windows(untrained, r₀, train_tspan, parameters["num_windows"])
         else
                 trained, train_sol = ResComp.train(untrained, r₀, train_tspan);
         end
-        test_sol = ResComp.test(trained, train_sol.u[end], test_tspan);
+        test_sol = ResComp.test(trained, train_sol.u[end], test_tspan, parameters["system"]);
         return test_sol.t[end] - test_tspan[1];
 end
 
@@ -30,27 +30,27 @@ function try_find_vpt(untrained, r₀, parameters)
 end
 
 function find_vpts(parameters)
-        nᵣ = parameters["reservoir_dimension"];
+        reservoir_dimension = parameters["experiment_params"]["reservoir_dimension"];
         system = parameters["system"]
         f = tanh
-        γ = parameters["gamma"]
-        σ = parameters["sigma"]
-        ρ = parameters["rho"]
-        system_dimension = parameters["system_dimension"]
-        α = parameters["alpha"]
+        gamma = parameters["gamma"]
+        sigma = parameters["sigma"]
+        rho = parameters["rho"]
+        system_dimension = parameters["experiment_params"]["system_dimension"]
+        alpha = parameters["alpha"]
 
-        vpts = zeros(50);
+        vpts = zeros(parameters["experiment_params"]["num_samples_per_trial"]);
         @threads for i = 1:length(vpts)
                 untrained = ResComp.initialize_rescomp(
                         system,
                         f,
-                        γ,
-                        σ,
-                        ρ,
-                        nᵣ,
+                        gamma,
+                        sigma,
+                        rho,
+                        reservoir_dimension,
                         system_dimension,
-                        α)
-                r₀ = 2*rand(Float64, nᵣ).-0.5
+                        alpha)
+                r₀ = 2*rand(Float64, reservoir_dimension).-0.5
                 vpts[i] = try_find_vpt(untrained, r₀, parameters);
         end;
         return vpts
