@@ -16,8 +16,6 @@ experiment = JSON.parse(read(experiment_filepath, String))
 params = JSON.json(experiment["optimization_parameters"])
 # Get num_trials
 num_trials = experiment["num_trials"]
-# Get experiment name
-experiment_name = experiment["experiment_name"]
 # Get system name
 system_name = experiment["system_name"]
 # Get system_duration
@@ -35,6 +33,19 @@ system = CaseStudies.get_system(
 
 # Create the optimization client
 client = ax_client.AxClient()
+
+experiment_name=system_name
+if experiment["windows"]
+    experiment_name *= "Window"
+else
+    experiment_name *= "Regular"
+end
+if experiment["random_initial_condition"]
+    experiment_name *= "Random"
+else
+    experiment_name *= "Continue"
+end
+
 
 # Create the experiment
 PyCall.py"$client.create_experiment(
@@ -56,5 +67,6 @@ end
 
 # Get current datetime
 time = Dates.format(now(), "yyyy-mm-dd-HH:MM:SS")
+filepath = results_directory*experiment_name
 # Save the results to a json file
-client.save_to_json_file(filepath=results_directory*experiment_name*time*".json")
+client.save_to_json_file(filepath=filepath*time*".json")

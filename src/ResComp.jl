@@ -66,7 +66,7 @@ end
 
 function test(rescomp::TrainedResComp, r₀, tspan::Tuple{T, T}, u) where {T<:Real}
         drive_prob = ODEProblem(drive!, r₀, tspan, rescomp);
-        condition(r, t, integrator) = norm(rescomp.W_out*r - u(t), 2) > 0.01;
+        condition(r, t, integrator) = norm(rescomp.W_out*r - u(t), 2) > 1.0;
         affect!(integrator) = terminate!(integrator);
         vpt_cb = DiscreteCallback(condition, affect!);
         drive_sol = solve(drive_prob, callback=vpt_cb);

@@ -8,7 +8,8 @@
     "train_time": 20.0,
     "test_time": 20.0,
     "num_trials": 25,
-    "results_directory": "/home/taylor/reservor_research/ResComp.jl/experiments",
+    "windows": false,
+    "results_directory": "/fslhome/tpool2/ResComp.jl/experiments",
     "optimization_parameters": [
         {
             "name": "gamma",
