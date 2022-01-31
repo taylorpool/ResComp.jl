@@ -1,6 +1,5 @@
 {
-    "experiment_name": "LorenzTest",
-    "system_name": "lorenz",
+    "system_name": "rossler",
     "system_duration": 200.0,
     "system_dimension": 3,
     "reservoir_dimension": 2500,
@@ -9,7 +8,8 @@
     "test_time": 20.0,
     "num_trials": 25,
     "windows": false,
-    "results_directory": "/fslhome/tpool2/ResComp.jl/experiments",
+    "random_initial_condition": true,
+    "results_directory": "/fslhome/tpool2/ResComp.jl/experiments/",
     "optimization_parameters": [
         {
             "name": "gamma",
