@@ -34,18 +34,22 @@ end;
 
 TrainedResComp(W_out, r::UntrainedResComp) = TrainedResComp(W_out, r.W_in, r.A, r.f, r.gamma, r.sigma, r.rho, r.alpha);
 
+function autonomous_drive(r, rescomp::Union{UntrainedResComp,TrainedResComp}, u)
+        return -r + rescomp.f.(rescomp.rho.*rescomp.A*r + rescomp.sigma*rescomp.W_in*u);
+end
+
 function drive!(dr, r, rescomp::UntrainedResComp, t)
-        dr[:] = rescomp.gamma.*(-r + rescomp.f.(rescomp.rho.*rescomp.A*r + rescomp.sigma*rescomp.W_in*rescomp.u(t)));
+        dr[:] = rescomp.gamma.*autonomous_drive(r, rescomp, rescomp.u(t));
 end;
 
 function drive!(dr, r, rescomp::TrainedResComp, t)
-        dr[:] = rescomp.gamma.*(-r + rescomp.f.(rescomp.rho*rescomp.A*r + rescomp.sigma*rescomp.W_in*rescomp.W_out*r));
+        dr[:] = rescomp.gamma.*autonomous_drive(r, rescomp, rescomp.W_out*r)
 end;
 
-function calculateOutputMapping(rescomp::UntrainedResComp, drive_sol) where {T<:Real}
+function calculateOutputMapping(rescomp::UntrainedResComp, drive_sol)
         R = hcat(drive_sol.u...)
         S = hcat(rescomp.u(drive_sol.t)...)
-        return ((R*R'.+rescomp.alpha) \ R*S')';
+        return ((R*R'.+rescomp.alpha*I) \ R*S')';
 end;
 
 function train(rescomp::UntrainedResComp, r₀, tspan::Tuple{T, T}) where {T<:Real}

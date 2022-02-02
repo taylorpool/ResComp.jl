@@ -26,9 +26,9 @@ function find_vpt(untrained, r₀, parameters)
         return test_sol.t[end] - test_tspan[1];
 end
 
-function try_find_vpt(untrained, r₀, parameters)
+function try_find_vpt(parameters)
         try
-                return find_vpt(untrained, r₀, parameters);
+                return vpt_function(parameters);
         catch e
                 if isa(e, LinearAlgebra.SingularException)
                         @warn "Could not solve least squares formulation"
@@ -38,7 +38,7 @@ function try_find_vpt(untrained, r₀, parameters)
         end
 end
 
-function find_vpts(parameters)
+function find_vpts(parameters, vpt_function)
         reservoir_dimension = parameters["experiment_params"]["reservoir_dimension"];
         system = parameters["system"]
         f = tanh
@@ -50,23 +50,13 @@ function find_vpts(parameters)
 
         vpts = zeros(parameters["experiment_params"]["num_samples_per_trial"]);
         @threads for i = 1:length(vpts)
-                untrained = ResComp.initialize_rescomp(
-                        system,
-                        f,
-                        gamma,
-                        sigma,
-                        rho,
-                        reservoir_dimension,
-                        system_dimension,
-                        alpha)
-                r₀ = 2*rand(Float64, reservoir_dimension).-0.5
-                vpts[i] = try_find_vpt(untrained, r₀, parameters);
+                vpts[i] = try_find_vpt(parameters);
         end;
         return vpts
 end;
 
-function evaluate(parameters)
-        vpts = find_vpts(parameters)
+function evaluate(parameters, vpt_function)
+        vpts = find_vpts(parameters, vpt_function)
         return Statistics.mean(vpts), Statistics.std(vpts)
 end;
 

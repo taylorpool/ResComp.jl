@@ -1,5 +1,6 @@
 include("CaseStudies.jl")
 include("Optimize.jl")
+include("Experiments.jl")
 using Dates
 using PyCall
 import JSON
@@ -34,12 +35,17 @@ system = CaseStudies.get_system(
 # Create the optimization client
 client = ax_client.AxClient()
 
+# Get the system name
 experiment_name=system_name
+
+# If we are doing windows
 if experiment["windows"]
     experiment_name *= "Window"
 else
     experiment_name *= "Regular"
 end
+
+# If we are setting a random initial condition
 if experiment["random_initial_condition"]
     experiment_name *= "Random"
 else
@@ -51,13 +57,16 @@ end
 PyCall.py"$client.create_experiment(
     name=$experiment_name,
     parameters=$$params,
-    objective_name='vpt',
+    objective_name='valid_prediction_time',
     minimize=False)"
 
 # Iterate through each trial
 for trial_index = 1:num_trials
+    # Get the trial parameters and index
     trial_parameters, trial_index = client.get_next_trial()
+    # Set the experiment parameters
     trial_parameters["experiment_params"] = experiment
+    # Set the system
     trial_parameters["system"] = system
     # Complete the trial
     client.complete_trial(
@@ -67,6 +76,5 @@ end
 
 # Get current datetime
 time = Dates.format(now(), "yyyy-mm-dd-HH:MM:SS")
-filepath = results_directory*experiment_name
 # Save the results to a json file
-client.save_to_json_file(filepath=filepath*time*".json")
+client.save_to_json_file(filepath=results_directory*experiment_name*time*".json")
