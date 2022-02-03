@@ -49,7 +49,7 @@ end;
 function calculateOutputMapping(rescomp::UntrainedResComp, drive_sol)
         R = hcat(drive_sol.u...)
         S = hcat(rescomp.u(drive_sol.t)...)
-        return ((R*R'.+rescomp.alpha*I) \ R*S')';
+        return ((R*R'+rescomp.alpha*I) \ R*S')';
 end;
 
 function train(rescomp::UntrainedResComp, r₀, tspan::Tuple{T, T}) where {T<:Real}

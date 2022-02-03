@@ -4,6 +4,23 @@ include("Experiments.jl")
 using Dates
 using PyCall
 import JSON
+using Distributed
+
+function get_vpt_function(experiment)
+    if experiment["windows"]
+        if experiment["random_initial_condition"]
+            Experiments.random_windows
+        else
+            Experiments.continue_windows
+        end
+    else
+        if experiment["random_initial_condition"]
+            Experiments.random_standard
+        else
+            Experiments.continue_standard
+        end
+    end
+end
 
 # Import the ax_client module
 ax_client = PyCall.pyimport("ax.service.ax_client")
@@ -52,6 +69,8 @@ else
     experiment_name *= "Continue"
 end
 
+# Get the valid prediction time function
+vpt_function = get_vpt_function(experiment)
 
 # Create the experiment
 PyCall.py"$client.create_experiment(
@@ -68,10 +87,13 @@ for trial_index = 1:num_trials
     trial_parameters["experiment_params"] = experiment
     # Set the system
     trial_parameters["system"] = system
+    trial_parameters["function"] = tanh
+    trial_parameters["reservoir_dimension"] = experiment["reservoir_dimension"]
+    trial_parameters["system_dimension"] = experiment["system_dimension"]
     # Complete the trial
     client.complete_trial(
         trial_index=trial_index,
-        raw_data=Optimize.evaluate(trial_parameters))
+        raw_data= Optimize.evaluate(trial_parameters, vpt_function))
 end
 
 # Get current datetime

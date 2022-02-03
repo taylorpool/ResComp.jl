@@ -29,7 +29,7 @@ function initial_condition_mapping(rescomp::ResComp.UntrainedResComp, initial_si
         norm(ResComp.autonomous_drive(r, rescomp, initial_signal))
     end
     result = optimize(cost_function, initial_guess, LBFGS(), autodiff=:forward)
-    return minimizer(result)
+    return Optim.minimizer(result)
 end
 
 function window_train(untrained_rescomp::ResComp.UntrainedResComp, initial_state, tspan, windows::WindowParams)
@@ -43,21 +43,21 @@ function window_train(untrained_rescomp::ResComp.UntrainedResComp, initial_state
         initial_state_system = untrained_rescomp.u(window_tspan[1])
         initial_state_reservoir = initial_condition_mapping(untrained_rescomp, initial_state_system)
 
-        drive_prob = ODEProblem(drive!, initial_state_reservoir, window_tspan, untrained_rescomp)
+        drive_prob = ODEProblem(ResComp.drive!, initial_state_reservoir, window_tspan, untrained_rescomp)
         drive_sol = solve(drive_prob)
         R = hcat(drive_sol.u...)
-        S = hcat(rescomp.u(drive_sol.t)...)
+        S = hcat(untrained_rescomp.u(drive_sol.t)...)
         R_hat += R*R'
         R_S += R*S'
     end
 
-    W_out = ((R_hat.+rescomp.alpha*I) \ R_S)';
-    return TrainedResComp(W_out, rescomp)
+    W_out = ((R_hat+untrained_rescomp.alpha*I) \ R_S)';
+    return ResComp.TrainedResComp(W_out, untrained_rescomp)
 end
 
 function burn_in(rescomp::Union{ResComp.UntrainedResComp, ResComp.TrainedResComp}, tspan)
     # Create burn in problem
-    burn_in_problem = ODEProblem(ResComp.drive!, rand(rescomp.reservoir_dimension), tspan, rescomp)
+    burn_in_problem = ODEProblem(ResComp.drive!, rand(size(rescomp.W_in)[1]), tspan, rescomp)
     # Solve burn in
     burn_in_solution = solve(burn_in_problem)
     # Return last burn in state

@@ -5,30 +5,9 @@ using Base.Threads
 using PyCall
 import Statistics
 
-function find_vpt(untrained, r₀, parameters)
-        train_time = parameters["experiment_params"]["train_time"]
-        train_tspan = (0.0, train_time);
-        if parameters["experiment_params"]["windows"]
-                trained, train_sol = ResComp.train_windows(untrained, r₀, train_tspan, parameters["num_windows"])
-        else
-                trained, train_sol = ResComp.train(untrained, r₀, train_tspan);
-        end
-        test_time = parameters["experiment_params"]["test_time"]
-        if parameters["experiment_params"]["random_initial_condition"]
-                system_duration = parameters["experiment_params"]["system_duration"]
-                random_initial_time = train_time + rand()*(system_duration-test_time-train_time)
-                test_tspan = (0.0, parameters["experiment_params"]["test_time"]) .+ random_initial_time
-                test_sol = ResComp.test(trained, train_sol.u[end], test_tspan, parameters["system"]);
-        else
-                test_tspan = (0.0, test_time) .+ train_tspan[2]
-                test_sol = ResComp.test(trained, train_sol.u[end], test_tspan, parameters["system"]);
-        end
-        return test_sol.t[end] - test_tspan[1];
-end
-
-function try_find_vpt(parameters)
+function try_find_vpt(parameters, vpt_function)
         try
-                return vpt_function(parameters);
+                return vpt_function(parameters)
         catch e
                 if isa(e, LinearAlgebra.SingularException)
                         @warn "Could not solve least squares formulation"
@@ -39,25 +18,16 @@ function try_find_vpt(parameters)
 end
 
 function find_vpts(parameters, vpt_function)
-        reservoir_dimension = parameters["experiment_params"]["reservoir_dimension"];
-        system = parameters["system"]
-        f = tanh
-        gamma = parameters["gamma"]
-        sigma = parameters["sigma"]
-        rho = parameters["rho"]
-        system_dimension = parameters["experiment_params"]["system_dimension"]
-        alpha = parameters["alpha"]
-
-        vpts = zeros(parameters["experiment_params"]["num_samples_per_trial"]);
+        vpts = zeros(parameters["experiment_params"]["num_samples_per_trial"])
         @threads for i = 1:length(vpts)
-                vpts[i] = try_find_vpt(parameters);
-        end;
+                vpts[i] = try_find_vpt(parameters, vpt_function)
+        end
         return vpts
-end;
+end
 
 function evaluate(parameters, vpt_function)
         vpts = find_vpts(parameters, vpt_function)
         return Statistics.mean(vpts), Statistics.std(vpts)
-end;
+end
 
-end;
+end
