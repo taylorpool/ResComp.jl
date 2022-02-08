@@ -14,25 +14,31 @@
         {
             "name": "gamma",
             "type": "range",
-            "bounds": [0.000001, 10],
+            "bounds": [0, 10],
             "value_type": "float"
         },
         {
             "name": "sigma",
             "type": "range",
-            "bounds": [0.000001, 10],
+            "bounds": [0, 10],
             "value_type": "float"
         },
         {
             "name": "rho",
             "type": "range",
-            "bounds": [0.000001, 10],
+            "bounds": [0, 10],
             "value_type": "float"
         },
         {
             "name": "alpha",
             "type": "range",
-            "bounds": [0.0000001, 10],
+            "bounds": [0, 10],
+            "value_type": "float"
+        },
+        {
+            "name": "density",
+            "type": "range",
+            "bounds": [0, 0.5],
             "value_type": "float"
         }
     ]

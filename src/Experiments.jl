@@ -51,7 +51,7 @@ function window_train(untrained_rescomp::ResComp.UntrainedResComp, initial_state
         R_S += R*S'
     end
 
-    W_out = ((R_hat+untrained_rescomp.alpha*I) \ R_S)';
+    W_out = ((R_hat+untrained_rescomp.alpha*I) \ R_S)'
     return ResComp.TrainedResComp(W_out, untrained_rescomp)
 end
 
@@ -73,7 +73,8 @@ function create_from_dict(params)
         params["rho"],
         params["reservoir_dimension"],
         params["system_dimension"],
-        params["alpha"]
+        params["alpha"],
+        params["density"]
     )
     return untrained_rescomp
 end
