@@ -74,7 +74,7 @@ function test(rescomp::TrainedResComp, r₀, tspan::Tuple{T, T}, u) where {T<:Re
         condition(r, t, integrator) = norm(rescomp.W_out*r - u(t), 2) > 1.0
         affect!(integrator) = terminate!(integrator)
         vpt_cb = DiscreteCallback(condition, affect!)
-        drive_sol = solve(drive_prob, callback=vpt_cb)
+        drive_sol = solve(drive_prob, callback=vpt_cb, alg=Midpoint())
         return drive_sol; 
 end;
 

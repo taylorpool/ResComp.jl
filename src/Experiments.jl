@@ -14,7 +14,7 @@ function standard_train(untrained_rescomp::ResComp.UntrainedResComp, initial_sta
     # Create training problem
     train_problem = ODEProblem(ResComp.drive!, initial_state, tspan, untrained_rescomp)
     # Solve training problem
-    train_solution = solve(train_problem)
+    train_solution = solve(train_problem, alg=Midpoint())
     # Find the proper W_out matrix
     W_out = ResComp.calculateOutputMapping(untrained_rescomp, train_solution)
     # Create the trained reservoir
@@ -44,7 +44,7 @@ function window_train(untrained_rescomp::ResComp.UntrainedResComp, initial_state
         initial_state_reservoir = initial_condition_mapping(untrained_rescomp, initial_state_system)
 
         drive_prob = ODEProblem(ResComp.drive!, initial_state_reservoir, window_tspan, untrained_rescomp)
-        drive_sol = solve(drive_prob)
+        drive_sol = solve(drive_prob, alg=Midpoint())
         R = hcat(drive_sol.u...)
         S = hcat(untrained_rescomp.u(drive_sol.t)...)
         R_hat += R*R'
