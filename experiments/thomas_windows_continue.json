@@ -9,30 +9,30 @@
     "num_trials": 25,
     "windows": true,
     "random_initial_condition": false,
-    "results_directory": "/fslhome/tpool2/ResComp.jl/experiments/",
+    "results_directory": "/fslhome/tpool2/rescomp_data/",
     "optimization_parameters": [
         {
             "name": "gamma",
             "type": "range",
-            "bounds": [0.000001, 100],
+            "bounds": [0, 100],
             "value_type": "float"
         },
         {
             "name": "sigma",
             "type": "range",
-            "bounds": [0.000001, 100],
+            "bounds": [0, 100],
             "value_type": "float"
         },
         {
             "name": "rho",
             "type": "range",
-            "bounds": [0.000001, 100],
+            "bounds": [0, 100],
             "value_type": "float"
         },
         {
             "name": "alpha",
             "type": "range",
-            "bounds": [0.0000001, 100],
+            "bounds": [0, 100],
             "value_type": "float"
         },
         {
@@ -40,6 +40,12 @@
             "type": "range",
             "bounds": [1, 20],
             "value_type": "int"
+        },
+        {
+            "name": "density",
+            "type": "range",
+            "bounds": [0, 0.4],
+            "value_type": "float"
         }
     ]
 }

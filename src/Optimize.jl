@@ -20,7 +20,9 @@ end
 function find_vpts(parameters, vpt_function)
         vpts = zeros(parameters["experiment_params"]["num_samples_per_trial"])
         @threads for i = 1:length(vpts)
+                println("Starting iteration ", i)
                 vpts[i] = try_find_vpt(parameters, vpt_function)
+                println("Finished iteration ", i)
         end
         return vpts
 end
