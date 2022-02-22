@@ -14,7 +14,7 @@ function standard_train(untrained_rescomp::ResComp.UntrainedResComp, initial_sta
     # Create training problem
     train_problem = ODEProblem(ResComp.drive!, initial_state, tspan, untrained_rescomp)
     # Solve training problem
-    train_solution = solve(train_problem, alg=Midpoint())
+    train_solution = solve(train_problem)
     # Find the proper W_out matrix
     W_out = ResComp.calculateOutputMapping(untrained_rescomp, train_solution)
     # Create the trained reservoir
@@ -25,11 +25,16 @@ end
 
 function initial_condition_mapping(rescomp::ResComp.UntrainedResComp, initial_signal)
     initial_guess = rescomp.f.(rescomp.sigma*rescomp.W_in*initial_signal);
-    cost_function = r -> begin
-        norm(ResComp.autonomous_drive(r, rescomp, initial_signal))
+    num_nodes = size(rescomp.A)[1]
+    initial_conditions = zeros(num_nodes)
+    for index = 1:num_nodes
+        cost_function = node -> begin
+            abs(rescomp.f(rescomp.rho*node + rescomp.sigma*dot(rescomp.W_in[index], initial_signal)) + node)
+        end
+        initial_conditions[index] = Optim.minimizer(
+            optimize(cost_function, initial_guess[index], LBFGS(); autodiff=:forward))
     end
-    result = optimize(cost_function, initial_guess, LBFGS(), autodiff=:forward)
-    return Optim.minimizer(result)
+    initial_conditions
 end
 
 function window_train(untrained_rescomp::ResComp.UntrainedResComp, initial_state, tspan, windows::WindowParams)
@@ -44,7 +49,7 @@ function window_train(untrained_rescomp::ResComp.UntrainedResComp, initial_state
         initial_state_reservoir = initial_condition_mapping(untrained_rescomp, initial_state_system)
 
         drive_prob = ODEProblem(ResComp.drive!, initial_state_reservoir, window_tspan, untrained_rescomp)
-        drive_sol = solve(drive_prob, alg=Midpoint())
+        drive_sol = solve(drive_prob)
         R = hcat(drive_sol.u...)
         S = hcat(untrained_rescomp.u(drive_sol.t)...)
         R_hat += R*R'
