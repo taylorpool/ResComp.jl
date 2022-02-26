@@ -10,22 +10,18 @@ struct WindowParams
     number
 end
 
-function standard_train(untrained_rescomp::ResComp.UntrainedResComp, initial_state, tspan)
-    # Create training problem
-    train_problem = ODEProblem(ResComp.drive!, initial_state, tspan, untrained_rescomp)
-    # Solve training problem
-    train_solution = solve(train_problem)
-    # Find the proper W_out matrix
-    W_out = ResComp.calculateOutputMapping(untrained_rescomp, train_solution)
+function standard_train(urc::ResComp.UntrainedResComp, initial_state, regularization, tspan)
+    # Apply training
+    W_out, train_solution = ResComp.train(urc, initial_state, regularization, tspan)
     # Create the trained reservoir
-    trained_rescomp::ResComp.TrainedResComp = ResComp.TrainedResComp(W_out, untrained_rescomp)
+    trc = ResComp.TrainedResComp(W_out, urc)
     # Return the trained reservoir and the training solution
-    return trained_rescomp, train_solution
+    return trc, train_solution
 end
 
 function initial_condition_mapping(rescomp::ResComp.UntrainedResComp, initial_signal)
     initial_guess = rescomp.f.(rescomp.sigma*rescomp.W_in*initial_signal);
-    num_nodes = size(rescomp.A)[1]
+    num_nodes = size(rescomp.W)[1]
     initial_conditions = zeros(num_nodes)
     for index = 1:num_nodes
         cost_function = node -> begin
@@ -37,27 +33,27 @@ function initial_condition_mapping(rescomp::ResComp.UntrainedResComp, initial_si
     initial_conditions
 end
 
-function window_train(untrained_rescomp::ResComp.UntrainedResComp, initial_state, tspan, windows::WindowParams)
+function window_train(urc::ResComp.UntrainedResComp, initial_state, tspan, windows::WindowParams)
     window_length = (tspan[2]-tspan[1])/windows.number
-    R_hat = zeros(size(untrained_rescomp.A))
-    R_S = zeros(size(untrained_rescomp.W_in))
+    R_hat = zeros(size(urc.A))
+    R_S = zeros(size(urc.W_in))
     
     for window_index = 1:windows.number
         window_tspan = window_length .* (window_index-1, window_index) .+ tspan[1]
 
-        initial_state_system = untrained_rescomp.u(window_tspan[1])
-        initial_state_reservoir = initial_condition_mapping(untrained_rescomp, initial_state_system)
+        initial_state_system = urc.u(window_tspan[1])
+        initial_state_reservoir = initial_condition_mapping(urc, initial_state_system)
 
-        drive_prob = ODEProblem(ResComp.drive!, initial_state_reservoir, window_tspan, untrained_rescomp)
+        drive_prob = ODEProblem(ResComp.drive!, initial_state_reservoir, window_tspan, urc)
         drive_sol = solve(drive_prob)
         R = hcat(drive_sol.u...)
-        S = hcat(untrained_rescomp.u(drive_sol.t)...)
+        S = hcat(urc.u(drive_sol.t)...)
         R_hat += R*R'
         R_S += R*S'
     end
 
-    W_out = ((R_hat+untrained_rescomp.alpha*I) \ R_S)'
-    return ResComp.TrainedResComp(W_out, untrained_rescomp)
+    W_out = ((R_hat+urc.alpha*I) \ R_S)'
+    return ResComp.TrainedResComp(W_out, urc)
 end
 
 function burn_in(rescomp::Union{ResComp.UntrainedResComp, ResComp.TrainedResComp}, tspan)
@@ -70,71 +66,64 @@ function burn_in(rescomp::Union{ResComp.UntrainedResComp, ResComp.TrainedResComp
 end
 
 function create_from_dict(params)
-    untrained_rescomp::ResComp.UntrainedResComp = ResComp.initialize_rescomp(
+    urc = ResComp.UntrainedResComp(
         params["system"],
-        params["function"],
-        params["gamma"],
-        params["sigma"],
         params["rho"],
-        params["reservoir_dimension"],
+        params["sigma"],
+        params["gamma"],
+        params["function"],
         params["system_dimension"],
-        params["alpha"],
-        params["density"]
+        params["reservoir_dimension"],
+        params["bias_scale"]
     )
-    return untrained_rescomp
+    return urc
 end
 
 function continue_standard(params)
     # Create untrained reservoir computer
-    untrained_rescomp::ResComp.UntrainedResComp = create_from_dict(params)
+    urc::ResComp.UntrainedResComp = create_from_dict(params)
 
     # Burn in
-    initial_state = burn_in(untrained_rescomp, (0.0, 40.0))
+    initial_state = ResComp.burn_in(urc, (0.0, 40.0))
 
     # Train
-    trained_rescomp, train_solution = standard_train(untrained_rescomp, initial_state, (40.0, 60.0))
-
-    # Test
-    test_solution = ResComp.test(trained_rescomp, train_solution.u[end], (60.0, 80.0), untrained_rescomp.u)
+    trc, train_solution = standard_train(urc, initial_state, params["alpha"], (40.0, 60.0))
 
     # Return the valid prediction time
-    return test_solution.t[end] - test_solution.t[1]
+    return ResComp.vpt(trc, train_solution.u[end], (60.0, 80.0), urc.u)
 end
 
 function random_standard(params)
     # Create untrained reservoir computer
-    untrained_rescomp::ResComp.UntrainedResComp = create_from_dict(params)
+    urc::ResComp.UntrainedResComp = create_from_dict(params)
 
     # Burn in
-    initial_state = burn_in(untrained_rescomp, (0.0, 40.0))
+    initial_state = ResComp.burn_in(urc, (0.0, 40.0))
 
     # Train
-    trained_rescomp, train_solution = standard_train(untrained_rescomp, initial_state, (40.0, 60.0))
+    trc, train_solution = standard_train(urc, initial_state, params["alpha"], (40.0, 60.0))
 
     # Get initial condition mapping
     initial_time = rand()*20 + 60.0
-    initial_state = initial_condition_mapping(untrained_rescomp, untrained_rescomp.u(initial_time))
-
-    # Test
-    test_solution = ResComp.test(trained_rescomp, initial_state, (initial_time, initial_time + 20.0), untrained_rescomp.u)
+    initial_state = initial_condition_mapping(urc, urc.u(initial_time))
 
     # Return the valid prediction time
-    return test_solution.t[end] - test_solution.t[1]
+    return ResComp.vpt(trc, initial_state, (initial_time, initial_time + 20.0), urc.u)
 end
 
 function continue_windows(params)
     # Create untrained reservoir computer
-    untrained_rescomp::ResComp.UntrainedResComp = create_from_dict(params)
+    urc::ResComp.UntrainedResComp = create_from_dict(params)
 
     # Burn in
-    initial_state = burn_in(untrained_rescomp, (0.0, 40.0))
+    initial_state = burn_in(urc, (0.0, 40.0))
 
     # Train using windowed approach
     windows = WindowParams(params["num_windows"])
-    trained_rescomp = window_train(untrained_rescomp, initial_state, (40.0, 60.0), windows)
+    trc = window_train(urc, initial_state, (40.0, 60.0), windows)
 
     # Test
-    test_solution = ResComp.test(trained_rescomp, untrained_rescomp.u(60.0), (60.0, 80.0), untrained_rescomp.u)
+    test_solution = ResComp.test(trc, urc.u(60.0), (60.0, 80.0), urc.u)
 
     # Return the valid prediction time
     return test_solution.t[end] - test_solution.t[1]
@@ -142,21 +131,21 @@ end
 
 function random_windows(params)
     # Create untrained reservoir computer
-    untrained_rescomp::ResComp.UntrainedResComp = create_from_dict(params)
+    urc::ResComp.UntrainedResComp = create_from_dict(params)
 
     # Burn in
-    initial_state = burn_in(untrained_rescomp, (0.0, 40.0))
+    initial_state = burn_in(urc, (0.0, 40.0))
 
     # Train using windowed approach
     windows = WindowParams(params["num_windows"])
-    trained_rescomp = window_train(untrained_rescomp, initial_state, (40.0, 60.0), windows)
+    trc = window_train(urc, initial_state, (40.0, 60.0), windows)
 
     # Get initial condition mapping
     initial_time = rand()*20 + 60.0
-    initial_state = initial_condition_mapping(untrained_rescomp, untrained_rescomp.u(initial_time))
+    initial_state = initial_condition_mapping(urc, urc.u(initial_time))
 
     # Test
-    test_solution = ResComp.test(trained_rescomp, initial_state, (initial_time, initial_time + 20.0), untrained_rescomp.u)
+    test_solution = ResComp.test(trc, initial_state, (initial_time, initial_time + 20.0), urc.u)
 
     # Return the valid prediction time
     return test_solution.t[end] - test_solution.t[1]

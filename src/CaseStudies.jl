@@ -29,9 +29,9 @@ end;
 
 function get_solution(system, duration::Real, params)
     problem = ODEProblem(system, rand(3), (0.0, 10.0), params)
-    solution = solve(problem)
+    solution = solve(problem, ABM54(), dt=0.02)
     problem_on_attractor = ODEProblem(system, solution.u[end], (0.0, duration), params)
-    solution_on_attractor = solve(problem_on_attractor, dt=0.02)
+    solution_on_attractor = solve(problem_on_attractor, ABM54(), dt=0.02)
     return solution_on_attractor
 end;
 

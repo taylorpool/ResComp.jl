@@ -103,3 +103,7 @@ function run_experiment(filepath)
     # Save the results to a json file
     client.save_to_json_file(filepath=results_directory*experiment_name*time*".json")
 end
+
+if length(ARGS) > 0
+    run_experiment(ARGS[1])
+end
