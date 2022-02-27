@@ -19,18 +19,10 @@ function standard_train(urc::ResComp.UntrainedResComp, initial_state, regulariza
     return trc, train_solution
 end
 
-function initial_condition_mapping(rescomp::ResComp.UntrainedResComp, initial_signal)
-    initial_guess = rescomp.f.(rescomp.sigma*rescomp.W_in*initial_signal);
-    num_nodes = size(rescomp.W)[1]
-    initial_conditions = zeros(num_nodes)
-    for index = 1:num_nodes
-        cost_function = node -> begin
-            abs(rescomp.f(rescomp.rho*node + rescomp.sigma*dot(rescomp.W_in[index], initial_signal)) + node)
-        end
-        initial_conditions[index] = Optim.minimizer(
-            optimize(cost_function, initial_guess[index], LBFGS(); autodiff=:forward))
-    end
-    initial_conditions
+function initial_condition_mapping(urc::ResComp.UntrainedResComp, initial_signal)
+    initial_guess = urc.f.(urc.W_in*vcat(1,initial_signal))
+    cost_function(r) = sum(((1-urc.gamma)*r + urc.gamma*(urc.f.(urc.W_in*vcat(1,initial_signal) + urc.W*r))).^2)
+    Optim.minimizer(optimize(cost_function, initial_guess, LBFGS(); autodiff=:forward))
 end
 
 function window_train(urc::ResComp.UntrainedResComp, initial_state, tspan, windows::WindowParams)

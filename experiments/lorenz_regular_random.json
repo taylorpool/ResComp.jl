@@ -20,7 +20,7 @@
         {
             "name": "sigma",
             "type": "range",
-            "bounds": [0, 100],
+            "bounds": [0, 10],
             "value_type": "float"
         },
         {
@@ -38,7 +38,7 @@
         {
             "name": "density",
             "type": "range",
-            "bounds": [0, 0.4],
+            "bounds": [0, 0.2],
             "value_type": "float"
         },
         {
