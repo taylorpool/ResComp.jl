@@ -1,5 +1,5 @@
 module ResComp
-using SparseArrays, DifferentialEquations, Arpack, LinearAlgebra
+using SparseArrays, DifferentialEquations, KrylovKit, LinearAlgebra
 
 export UntrainedResComp, evolve!, burn_in, train, TrainedResComp, predict, vpt
 
@@ -27,7 +27,7 @@ UntrainedResComp(u, rho, sigma, gamma, f, Nu, Nr, bias_scale) = begin
         
         # Compute W
         W = 2*sprand(Nr, Nr, 0.05).-1
-        spectral_radius = abs(eigs(W, nev=1, ritzvec=false)[1][1])
+        spectral_radius = abs(eigsolve(W)[1][1])
         W *= rho/spectral_radius
     
         return UntrainedResComp(W_in, W, f, gamma, u)
