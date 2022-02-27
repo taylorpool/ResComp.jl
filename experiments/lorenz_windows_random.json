@@ -3,36 +3,48 @@
     "system_duration": 200.0,
     "system_dimension": 3,
     "reservoir_dimension": 2500,
-    "num_samples_per_trial": 1,
+    "num_samples_per_trial": 25,
     "train_time": 20.0,
     "test_time": 20.0,
-    "num_trials": 25,
+    "num_trials": 30,
     "windows": true,
     "random_initial_condition": true,
-    "results_directory": "/Users/taylorpool/rescomp_data/",
+    "results_directory": "/fslhome/tpool2/rescomp_data/",
     "optimization_parameters": [
         {
             "name": "gamma",
             "type": "range",
-            "bounds": [0, 100],
+            "bounds": [0, 1],
             "value_type": "float"
         },
         {
             "name": "sigma",
             "type": "range",
-            "bounds": [0, 100],
+            "bounds": [0, 10],
             "value_type": "float"
         },
         {
             "name": "rho",
             "type": "range",
-            "bounds": [0, 100],
+            "bounds": [0, 1],
             "value_type": "float"
         },
         {
             "name": "alpha",
             "type": "range",
-            "bounds": [0, 100],
+            "bounds": [0, 1],
+            "value_type": "float"
+        },
+        {
+            "name": "density",
+            "type": "range",
+            "bounds": [0, 0.2],
+            "value_type": "float"
+        },
+        {
+            "name": "bias_scale",
+            "type": "range",
+            "bounds": [0, 10],
             "value_type": "float"
         },
         {
@@ -40,12 +52,6 @@
             "type": "range",
             "bounds": [1, 20],
             "value_type": "int"
-        },
-        {
-            "name": "density",
-            "type": "range",
-            "bounds": [0, 0.4],
-            "value_type": "float"
         }
     ]
 }

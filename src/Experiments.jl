@@ -116,11 +116,11 @@ function random_windows(params)
     urc::ResComp.UntrainedResComp = create_from_dict(params)
 
     # Burn in
-    initial_state = burn_in(urc, (0.0, 40.0))
+    initial_state = ResComp.burn_in(urc, (0.0, 40.0))
 
     # Train using windowed approach
     windows = WindowParams(params["num_windows"])
-    trc = window_train(urc, initial_state, (40.0, 60.0), windows)
+    trc = window_train(urc, params["alpha"], (40.0, 60.0), windows)
 
     # Get initial condition mapping
     initial_time = rand()*20 + 60.0
