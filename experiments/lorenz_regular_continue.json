@@ -14,7 +14,7 @@
         {
             "name": "gamma",
             "type": "range",
-            "bounds": [0, 10],
+            "bounds": [0, 1],
             "value_type": "float"
         },
         {
@@ -26,13 +26,13 @@
         {
             "name": "rho",
             "type": "range",
-            "bounds": [0, 10],
+            "bounds": [0, 1],
             "value_type": "float"
         },
         {
             "name": "alpha",
             "type": "range",
-            "bounds": [0, 10],
+            "bounds": [0, 1],
             "value_type": "float"
         },
         {
