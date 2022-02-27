@@ -35,7 +35,7 @@ end
 
 function window_train(urc::ResComp.UntrainedResComp, initial_state, tspan, windows::WindowParams)
     window_length = (tspan[2]-tspan[1])/windows.number
-    R_hat = zeros(size(urc.A))
+    R_hat = zeros(size(urc.W))
     R_S = zeros(size(urc.W_in))
     
     for window_index = 1:windows.number
@@ -44,7 +44,7 @@ function window_train(urc::ResComp.UntrainedResComp, initial_state, tspan, windo
         initial_state_system = urc.u(window_tspan[1])
         initial_state_reservoir = initial_condition_mapping(urc, initial_state_system)
 
-        drive_prob = ODEProblem(ResComp.drive!, initial_state_reservoir, window_tspan, urc)
+        drive_prob = ODEProblem(ResComp.evolve!, initial_state_reservoir, window_tspan, urc)
         drive_sol = solve(drive_prob)
         R = hcat(drive_sol.u...)
         S = hcat(urc.u(drive_sol.t)...)
