@@ -1,81 +1,80 @@
 module ResComp
-using DifferentialEquations
-using LinearAlgebra
-using SparseArrays
+using SparseArrays, DifferentialEquations, KrylovKit, LinearAlgebra
 
-export UntrainedResComp, TrainedResComp, train, test
+export UntrainedResComp, evolve!, burn_in, train, TrainedResComp, predict, vpt
 
 struct UntrainedResComp
-    u 
-    W_in
-    A
-    f
-    gamma
-    sigma
-    rho
-    alpha
-end;
-
-function initialize_rescomp(u, f, gamma, sigma, rho, reservoir_dimension::Int, system_dimension::Int, alpha, density)
-        A = sprand(Float64, reservoir_dimension, reservoir_dimension, density).-0.5;
-        W_in = sprand(Float64, reservoir_dimension, system_dimension, density).-0.5;
-        return ResComp.UntrainedResComp(u, W_in./opnorm(W_in, Inf), A./opnorm(A, Inf), f, gamma, sigma, rho, alpha);
-end;
+        W_in
+        W
+        f
+        gamma
+        u
+end
 
 struct TrainedResComp
-    W_out
-    W_in
-    A
-    f
-    gamma
-    sigma
-    rho
-    alpha
-end;
-
-TrainedResComp(W_out, r::UntrainedResComp) = TrainedResComp(W_out, r.W_in, r.A, r.f, r.gamma, r.sigma, r.rho, r.alpha)
-
-function autonomous_drive(r, rescomp::Union{UntrainedResComp,TrainedResComp}, u)
-        return -r + rescomp.f.(rescomp.rho.*rescomp.A*r + rescomp.sigma*rescomp.W_in*u)
+        W_in
+        W
+        W_out
+        f
+        gamma
 end
 
-function drive!(dr, r, rescomp::UntrainedResComp, t)
-        dr[:] = rescomp.gamma.*autonomous_drive(r, rescomp, rescomp.u(t))
-end;
-
-function drive!(dr, r, rescomp::TrainedResComp, t)
-        dr[:] = rescomp.gamma.*autonomous_drive(r, rescomp, rescomp.W_out*r)
-end;
-
-function calculateOutputMapping(rescomp::UntrainedResComp, drive_sol)
-        R = hcat(drive_sol.u...)
-        S = hcat(rescomp.u(drive_sol.t)...)
-        return ((R*R'+rescomp.alpha*I) \ R*S')'
+UntrainedResComp(u, rho, sigma, gamma, f, Nu, Nr, bias_scale) = begin 
+        # Compute W_in
+        W_in = 2*rand(Nr, 1+Nu).-1
+        W_in[:,1] *= bias_scale
+        W_in[:,2:end] *= sigma
+        
+        # Compute W
+        W = 2*sprand(Nr, Nr, 0.05).-1
+        spectral_radius = abs(eigsolve(W)[1][1])
+        W *= rho/spectral_radius
+    
+        return UntrainedResComp(W_in, W, f, gamma, u)
 end
 
-function train(rescomp::UntrainedResComp, r₀, tspan::Tuple{T, T}) where {T<:Real}
-        drive_prob = ODEProblem(drive!, r₀, tspan, rescomp)
-        drive_sol = solve(drive_prob)
-        W_out = calculateOutputMapping(rescomp, drive_sol)
-        return TrainedResComp(W_out, rescomp), drive_sol
+TrainedResComp(W_out, rc::UntrainedResComp) = TrainedResComp(
+        rc.W_in, rc.W, W_out, rc.f, rc.gamma)
+
+function evolve!(dr, r, rc::UntrainedResComp, t)
+        dr[:] = (1-rc.gamma)*r + rc.gamma*(rc.f.(rc.W_in*vcat(1,rc.u(t)) + rc.W*r))
 end
 
-function train_windows(rescomp::UntrainedResComp, r₀, tspan::Tuple{T, T}, num_windows::Int) where {T<:Real}
-        drive_prob = ODEProblem(drive!, r₀, tspan, rescomp)
-        affect!(integrator) = integrator.u = integrator.p.Wᵢₙ*integrator.p.u(integrator.t)
-        callback = PeriodicCallback(affect!, (tspan[2]-tspan[1])/num_windows)
-        drive_sol = solve(drive_prob, callback=callback)
-        W_out = calculateOutputMapping(rescomp, drive_sol)
-        return TrainedResComp(W_out, rescomp), drive_sol
+function burn_in(rc::Union{UntrainedResComp,TrainedResComp}, tspan)
+        r0 = rand(size(rc.W)[1])
+        prob = ODEProblem(evolve!, r0, tspan, rc)
+        return solve(prob).u[end]
 end
 
-function test(rescomp::TrainedResComp, r₀, tspan::Tuple{T, T}, u) where {T<:Real}
-        drive_prob = ODEProblem(drive!, r₀, tspan, rescomp)
-        condition(r, t, integrator) = norm(rescomp.W_out*r - u(t), 2) > 1.0
+function train(rc::UntrainedResComp, r0, α, tspan)
+        prob = ODEProblem(evolve!, r0, tspan, rc)
+        solution = solve(prob, dt=0.02);
+        R = hcat(solution.u...)
+        U = hcat(rc.u.(solution.t)...)
+        return ((R*R' - α*I) \ R*(U'))', solution
+end
+
+function evolve!(dr, r, trc::TrainedResComp, t)
+        dr[:] = (1-trc.gamma)*r + trc.gamma*(trc.f.(trc.W_in*vcat(1,trc.W_out*r) + trc.W*r))
+end
+
+function predict(trc::TrainedResComp, r0, tspan)
+        prob = ODEProblem(self_evolve!, r0, tspan, trc)
+        return solve(prob, dt=0.02);
+end
+
+function test(trc::TrainedResComp, r0, tspan, u)
+        drive_prob = ODEProblem(evolve!, r0, tspan, trc)
+        condition(r, t, integrator) = norm(trc.W_out*r - u(t), 2) > 1.0
         affect!(integrator) = terminate!(integrator)
         vpt_cb = DiscreteCallback(condition, affect!)
-        drive_sol = solve(drive_prob, callback=vpt_cb, alg=Midpoint())
+        drive_sol = solve(drive_prob, callback=vpt_cb)
         return drive_sol; 
-end;
+end
+
+function vpt(trc::TrainedResComp, r0, tspan, u)
+        valid_prediction = test(trc, r0, tspan, u)
+        return valid_prediction.t[end] - valid_prediction.t[1]
+end
 
 end

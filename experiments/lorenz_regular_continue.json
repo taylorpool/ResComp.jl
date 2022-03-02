@@ -6,7 +6,7 @@
     "num_samples_per_trial": 25,
     "train_time": 20.0,
     "test_time": 20.0,
-    "num_trials": 25,
+    "num_trials": 30,
     "windows": false,
     "random_initial_condition": false,
     "results_directory": "/fslhome/tpool2/rescomp_data/",
@@ -14,7 +14,7 @@
         {
             "name": "gamma",
             "type": "range",
-            "bounds": [0, 10],
+            "bounds": [0, 1],
             "value_type": "float"
         },
         {
@@ -26,19 +26,25 @@
         {
             "name": "rho",
             "type": "range",
-            "bounds": [0, 10],
+            "bounds": [0, 1],
             "value_type": "float"
         },
         {
             "name": "alpha",
             "type": "range",
-            "bounds": [0, 10],
+            "bounds": [0, 1],
             "value_type": "float"
         },
         {
             "name": "density",
             "type": "range",
-            "bounds": [0, 0.4],
+            "bounds": [0, 0.2],
+            "value_type": "float"
+        },
+        {
+            "name": "bias_scale",
+            "type": "range",
+            "bounds": [0, 10],
             "value_type": "float"
         }
     ]
