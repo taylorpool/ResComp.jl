@@ -21,7 +21,7 @@ end
 
 function initial_condition_mapping(urc::ResComp.UntrainedResComp, initial_signal)
     initial_guess = urc.f.(urc.W_in*vcat(1,initial_signal))
-    cost_function(r) = sum(((1-urc.gamma)*r + urc.gamma*(urc.f.(urc.W_in*vcat(1,initial_signal) + urc.W*r))).^2)
+    cost_function(r) = sum(ResComp.evolve(r,urc,initial_signal).^2)
     Optim.minimizer(optimize(cost_function, initial_guess, LBFGS(); autodiff=:forward))
 end
 

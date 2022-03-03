@@ -1,7 +1,7 @@
 module ResComp
 using SparseArrays, DifferentialEquations, KrylovKit, LinearAlgebra
 
-export UntrainedResComp, evolve!, burn_in, train, TrainedResComp, predict, vpt
+export UntrainedResComp, evolve!, burn_in, train, test, TrainedResComp, predict, vpt
 
 struct UntrainedResComp
         W_in
@@ -33,11 +33,18 @@ UntrainedResComp(u, rho, sigma, gamma, f, Nu, Nr, bias_scale) = begin
         return UntrainedResComp(W_in, W, f, gamma, u)
 end
 
-TrainedResComp(W_out, rc::UntrainedResComp) = TrainedResComp(
-        rc.W_in, rc.W, W_out, rc.f, rc.gamma)
+TrainedResComp(W_out, urc::UntrainedResComp) = TrainedResComp(
+        urc.W_in, urc.W, W_out, urc.f, urc.gamma)
 
-function evolve!(dr, r, rc::UntrainedResComp, t)
-        dr[:] = (1-rc.gamma)*r + rc.gamma*(rc.f.(rc.W_in*vcat(1,rc.u(t)) + rc.W*r))
+function evolve(r, urc::UntrainedResComp, u::T) where T <: AbstractVector
+        urc.gamma*(-r + urc.f.(urc.W_in*vcat(1,u) + urc.W*r))
+end
+function evolve(r, urc::UntrainedResComp, t::T) where T <: Real
+        urc.gamma*(-r + urc.f.(urc.W_in*vcat(1,urc.u(t)) + urc.W*r))
+end
+
+function evolve!(dr, r, urc::UntrainedResComp, t)
+        dr[:] = evolve(r, urc, t)
 end
 
 function burn_in(rc::Union{UntrainedResComp,TrainedResComp}, tspan)
@@ -48,19 +55,24 @@ end
 
 function train(rc::UntrainedResComp, r0, α, tspan)
         prob = ODEProblem(evolve!, r0, tspan, rc)
-        solution = solve(prob, dt=0.02);
+        solution = solve(prob, ABM54(), dt=0.02);
         R = hcat(solution.u...)
         U = hcat(rc.u.(solution.t)...)
         return ((R*R' - α*I) \ R*(U'))', solution
 end
 
-function evolve!(dr, r, trc::TrainedResComp, t)
-        dr[:] = (1-trc.gamma)*r + trc.gamma*(trc.f.(trc.W_in*vcat(1,trc.W_out*r) + trc.W*r))
+function evolve(r, trc::TrainedResComp, t)
+        trc.gamma*(-r + trc.f.(trc.W_in*vcat(1,trc.W_out*r) + trc.W*r))
 end
 
+function evolve!(dr, r, trc::TrainedResComp, t)
+        dr[:] = evolve(r, trc, t)
+end
+
+
 function predict(trc::TrainedResComp, r0, tspan)
-        prob = ODEProblem(self_evolve!, r0, tspan, trc)
-        return solve(prob, dt=0.02);
+        prob = ODEProblem(evolve!, r0, tspan, trc)
+        return solve(prob);
 end
 
 function test(trc::TrainedResComp, r0, tspan, u)
