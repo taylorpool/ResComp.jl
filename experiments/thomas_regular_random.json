@@ -3,7 +3,7 @@
     "system_duration": 100.0,
     "system_dimension": 3,
     "reservoir_dimension": 2500,
-    "num_samples_per_trial": 25,
+    "num_samples_per_trial": 20,
     "train_time": 20.0,
     "test_time": 20.0,
     "num_trials": 30,
