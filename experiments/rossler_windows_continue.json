@@ -36,12 +36,6 @@
             "value_type": "float"
         },
         {
-            "name": "density",
-            "type": "range",
-            "bounds": [0, 0.2],
-            "value_type": "float"
-        },
-        {
             "name": "bias_scale",
             "type": "range",
             "bounds": [0, 10],

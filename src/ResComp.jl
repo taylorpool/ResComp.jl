@@ -1,7 +1,7 @@
 module ResComp
 using SparseArrays, DifferentialEquations, KrylovKit, LinearAlgebra
 
-export UntrainedResComp, evolve!, burn_in, train, test, TrainedResComp, predict, vpt
+export UntrainedResComp, evolve!, burn_in, train, test, TrainedResComp, predict, vpt, evolve
 
 struct UntrainedResComp
         W_in
