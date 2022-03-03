@@ -92,6 +92,7 @@ function run_experiment(filepath)
         trial_parameters["function"] = tanh
         trial_parameters["reservoir_dimension"] = experiment["reservoir_dimension"]
         trial_parameters["system_dimension"] = experiment["system_dimension"]
+        trial_parameters["system_duration"] = system_duration
         # Complete the trial
         client.complete_trial(
             trial_index=trial_index,

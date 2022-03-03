@@ -31,6 +31,8 @@ function window_train(urc::ResComp.UntrainedResComp, regularization, tspan, wind
     Nu = size(urc.W_in)[2]-1
     R_hat = zeros(Nr, Nr)
     R_S = zeros(Nr, Nu)
+
+    final_state = zeros(Nr)
     
     for window_index = 1:windows.number
         window_tspan = window_length .* (window_index-1, window_index) .+ tspan[1]
@@ -44,10 +46,12 @@ function window_train(urc::ResComp.UntrainedResComp, regularization, tspan, wind
         S = hcat(urc.u.(drive_sol.t)...)
         R_hat += R*R'
         R_S += R*S'
+
+        final_state = drive_sol.u[end]
     end
 
     W_out = ((R_hat-regularization*I) \ R_S)'
-    return ResComp.TrainedResComp(W_out, urc)
+    return ResComp.TrainedResComp(W_out, urc), final_state
 end
 
 function create_from_dict(params)
@@ -64,70 +68,85 @@ function create_from_dict(params)
     return urc
 end
 
+function burn_train_test(duration)
+    (0.0, duration/3), (duration/3, 2//3*duration), (2//3*duration, duration)
+end
+
 function continue_standard(params)
+    # Create burn in, train, and test timespans
+    burn_tspan, train_tspan, test_tspan = burn_train_test(params["system_duration"])
+
     # Create untrained reservoir computer
     urc::ResComp.UntrainedResComp = create_from_dict(params)
 
     # Burn in
-    initial_state = ResComp.burn_in(urc, (0.0, 40.0))
+    initial_state = ResComp.burn_in(urc, burn_tspan)
 
     # Train
-    trc, train_solution = standard_train(urc, initial_state, params["alpha"], (40.0, 60.0))
+    trc, train_sol = standard_train(urc, initial_state, params["alpha"], train_tspan)
 
     # Return the valid prediction time
-    return ResComp.vpt(trc, train_solution.u[end], (60.0, 80.0), urc.u)
+    return ResComp.vpt(trc, train_sol.u[end], test_tspan, urc.u)
 end
 
 function random_standard(params)
+    # Create burn in, train, and test timespans
+    burn_tspan, train_tspan, test_tspan = burn_train_test(params["system_duration"])
+
     # Create untrained reservoir computer
     urc::ResComp.UntrainedResComp = create_from_dict(params)
 
     # Burn in
-    initial_state = ResComp.burn_in(urc, (0.0, 40.0))
+    initial_state = ResComp.burn_in(urc, burn_tspan)
 
     # Train
-    trc, train_solution = standard_train(urc, initial_state, params["alpha"], (40.0, 60.0))
+    trc, train_sol = standard_train(urc, initial_state, params["alpha"], train_tspan)
 
     # Get initial condition mapping
-    initial_time = rand()*20 + 60.0
+    test_time = test_tspan[2]-test_tspan[1]
+    initial_time = rand()/2*test_time + test_tspan[1]
     initial_state = initial_condition_mapping(urc, urc.u(initial_time))
 
     # Return the valid prediction time
-    return ResComp.vpt(trc, initial_state, (initial_time, initial_time + 20.0), urc.u)
+    return ResComp.vpt(trc, initial_state, (initial_time, test_tspan[2]), urc.u)
 end
 
 function continue_windows(params)
+    # Create burn in, train, and test timespans
+    burn_tspan, train_tspan, test_tspan = burn_train_test(params["system_duration"])
+
     # Create untrained reservoir computer
     urc::ResComp.UntrainedResComp = create_from_dict(params)
 
     # Train using windowed approach
     windows = WindowParams(params["num_windows"])
-    trc = window_train(urc, params["alpha"], (40.0, 60.0), windows)
-
-    # Compute initial reservoir state
-    r0 = initial_condition_mapping(urc, urc.u(60.0))
+    trc, final_state = window_train(urc, params["alpha"], train_tspan, windows)
 
     # Return the valid prediction time
-    return ResComp.vpt(trc, r0, (60.0, 80.0), urc.u)
+    return ResComp.vpt(trc, final_state, test_tspan, urc.u)
 end
 
 function random_windows(params)
+    # Create burn in, train, and test timespans
+    burn_tspan, train_tspan, test_tspan = burn_train_test(params["system_duration"])
+
     # Create untrained reservoir computer
     urc::ResComp.UntrainedResComp = create_from_dict(params)
 
     # Burn in
-    initial_state = ResComp.burn_in(urc, (0.0, 40.0))
+    initial_state = ResComp.burn_in(urc, burn_tspan)
 
     # Train using windowed approach
     windows = WindowParams(params["num_windows"])
-    trc = window_train(urc, params["alpha"], (40.0, 60.0), windows)
+    trc, final_state = window_train(urc, params["alpha"], train_tspan, windows)
 
     # Get initial condition mapping
-    initial_time = rand()*20 + 60.0
+    test_time = test_tspan[2]-test_tspan[1]
+    initial_time = rand()/2*test_time + test_tspan[1]
     initial_state = initial_condition_mapping(urc, urc.u(initial_time))
 
     # Return the valid prediction time
-    return ResComp.vpt(trc, initial_state, (initial_time, initial_time+20.0), urc.u)
+    return ResComp.vpt(trc, initial_state, (initial_time, test_tspan[2]), urc.u)
 end
 
 end

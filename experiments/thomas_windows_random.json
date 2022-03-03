@@ -1,6 +1,6 @@
 {
     "system_name": "thomas",
-    "system_duration": 200.0,
+    "system_duration": 100.0,
     "system_dimension": 3,
     "reservoir_dimension": 2500,
     "num_samples_per_trial": 25,
@@ -44,7 +44,7 @@
         {
             "name": "num_windows",
             "type": "range",
-            "bounds": [1, 20],
+            "bounds": [1, 10],
             "value_type": "int"
         }
     ]

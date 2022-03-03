@@ -1,6 +1,6 @@
 {
     "system_name": "lorenz",
-    "system_duration": 200.0,
+    "system_duration": 100.0,
     "system_dimension": 3,
     "reservoir_dimension": 2500,
     "num_samples_per_trial": 25,
